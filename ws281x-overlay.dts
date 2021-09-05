@@ -1,0 +1,15 @@
+/dts-v1/;
+/plugin/;
+
+/ {
+	compatible = "brcm,bcm2835";
+
+	fragment@0 {
+		target-path = "/";
+		__overlay__ {
+			ws281x-transmitter {
+				compatible = "leds,ws281x";
+			};
+		};
+	};
+};
