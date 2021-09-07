@@ -14,8 +14,8 @@ Legal pin,function combinations for each channel:
 		target = <&gpio>;
 		__overlay__ {
 			pwm_pins: pwm_pins {
-				brcm,pins = <18 19>;
-				brcm,function = <2 2>; /* Alt5 */
+				brcm,pins = <12 13>;
+				brcm,function = <4 4>; /* Alt0 */
 			};
 		};
 	};
