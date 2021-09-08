@@ -3,7 +3,7 @@
 
 /*
 Legal pin,function combinations for each channel:
-  PWM0: 12,4(Alt0) 18,2(Alt5) 40,4(Alt0)            52,5(Alt1)
+  PWM0: 12,4(Alt0) 18,2(Alt5) 40,4(Alt0)			52,5(Alt1)
   PWM1: 13,4(Alt0) 19,2(Alt5) 41,4(Alt0) 45,4(Alt0) 53,5(Alt1)
 */
 
@@ -35,6 +35,7 @@ Legal pin,function combinations for each channel:
 		__overlay__ {
 			ws281x-transmitter {
 				compatible = "leds,ws281x";
+				pwms = <&pwm 0 100>;
 			};
 		};
 	};
