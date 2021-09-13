@@ -55,3 +55,10 @@ dkms.conf
 *.dtb
 *.dtbo
 
+# Eclipse files
+.project
+.cproject
+.settings/
+
+# Test binaries
+test/pwm_blaster
