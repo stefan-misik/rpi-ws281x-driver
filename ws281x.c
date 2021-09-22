@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: GPL-2.0 */
 /* Copyright 2021 Stefan Misik.  All rights reserved. */
 
+#include <linux/list.h>
 #include <linux/module.h>
 #include <linux/fs.h>
 #include <linux/platform_device.h>
@@ -8,6 +9,37 @@
 #include <linux/of_device.h>
 
 #define DEV_NAME "ws281x"
+#define OUT_CNT 2
+
+struct led_out
+{
+	struct list_head queue;
+
+	char devname[64];
+	struct miscdevice miscdev;
+};
+
+struct led_file;
+
+struct led_buffer
+{
+	struct list_head queue;
+	struct led_file * owner;
+
+	size_t capacity;
+	size_t length;
+	char data[0];
+};
+
+struct led_file
+{
+	int led_out;
+	struct led_buffer * my_buffer;
+	bool buffer_is_enqueued;
+};
+
+
+static struct led_out all_led_outs[OUT_CNT];
 
 static int ws281x_open(struct inode *inode, struct file *file)
 {
@@ -31,31 +63,58 @@ static const struct file_operations ws281x_fops = {
     .unlocked_ioctl = ws281x_ioctl,
 };
 
-static struct miscdevice ws281x_miscdev= {
-    .minor = MISC_DYNAMIC_MINOR,
-    .name = DEV_NAME,
-    .fops = &ws281x_fops,
-};
-
 static int ws281x_probe(struct platform_device *pdev)
 {
-    int retval;
-    retval = misc_register(&ws281x_miscdev);
+	int out_n;
+    int retval = 0;
 
-    if (0 != retval)
-    {
-        pr_err("Could not register the misc device " DEV_NAME ".\n");
-        return retval;
-    }
+	for (out_n = 0; out_n != OUT_CNT; ++out_n)
+	{
+		struct led_out * cur_out = &all_led_outs[out_n];
+		INIT_LIST_HEAD(&cur_out->queue);
 
-    pr_info(DEV_NAME ": got minor %i.\n", ws281x_miscdev.minor);
+		snprintf(cur_out->devname, sizeof(cur_out->devname),
+				DEV_NAME "%i", out_n);
+		// just to be sure
+		cur_out->devname[sizeof(cur_out->devname) - 1] = '\0';
+
+		cur_out->miscdev.minor = MISC_DYNAMIC_MINOR;
+		cur_out->miscdev.name = cur_out->devname;
+		cur_out->miscdev.fops = &ws281x_fops;
+		retval = misc_register(&cur_out->miscdev);
+		if (0 != retval)
+		{
+			pr_err("Could not register the misc device '%s'.\n",
+					cur_out->devname);
+			goto error;
+		}
+	}
+
     return 0;
+
+    error:
+	// Deregister all already registered devices
+	while (0 != out_n)
+	{
+		--out_n;
+		misc_deregister(&all_led_outs[out_n].miscdev);
+	}
+	return retval;
 }
 
 static int ws281x_remove(struct platform_device *pdev)
 {
-    misc_deregister(&ws281x_miscdev);
-    pr_info(DEV_NAME ": removed.\n");
+	int out_n;
+
+	for (out_n = 0; out_n != OUT_CNT; ++out_n)
+	{
+		struct led_out * cur_out = &all_led_outs[out_n];
+
+		// TODO Clean-up enqueued buffers
+
+		misc_deregister(&cur_out->miscdev);
+	}
+
     return 0;
 }
 
